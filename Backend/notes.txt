@@ -1,0 +1,100 @@
+
+Environment.GetEnvironmentVariable("VAR_NAME") → lecture brute, comme process.env.
+
+builder.Configuration[...] → lecture intégrée, qui combine appsettings.json, appsettings.{env}.json, et les variables d’environnement.
+
+#############################
+Rôle des fichiers appsettings
+appsettings.json → valeurs communes, structure de base (non sensibles).
+
+appsettings.Development.json → valeurs spécifiques au dev (DB locale, logs détaillés).
+
+appsettings.Production.json → souvent placeholders ou carrément absent, car les vraies valeurs viennent des variables d’environnement.
+👉 Leur utilité principale : documenter et séparer les contextes pour éviter les erreurs (ex. ne pas utiliser une DB de prod en dev).
+
+#################################################
+
+⚖️ Explication avec tes propres mots
+Chevrons (<Parent, Child>) → mapping direct : si on demande le parent, crée un enfant.
+
+Lambda avec GetRequiredService → mapping indirect : si on demande le parent, retourne l’enfant déjà enregistré et configuré.
+
+Lambda avec logique custom → mapping dynamique : si on demande le parent, exécute une fonction qui décide quoi donner (peut être une instance existante, ou une nouvelle créée à la main).
+
+////////////////
+
+🔹 Exemple concret
+Imaginons que tu as une classe de base et deux implémentations :
+
+csharp
+public abstract class PaymentService
+{
+    public abstract void Pay();
+}
+
+public class PaypalPaymentService : PaymentService
+{
+    public override void Pay() => Console.WriteLine("Paid with PayPal");
+}
+
+public class StripePaymentService : PaymentService
+{
+    public override void Pay() => Console.WriteLine("Paid with Stripe");
+}
+Cas 1 : Syntaxe simple
+csharp
+builder.Services.AddScoped<PaymentService, PaypalPaymentService>();
+Ici, chaque fois qu’on demande PaymentService, le container crée une nouvelle instance de PaypalPaymentService.
+
+Pas de logique supplémentaire, c’est direct.
+
+Cas 2 : Syntaxe avec lambda
+csharp
+builder.Services.AddScoped<PaymentService>(sp =>
+{
+    // Choisir dynamiquement quelle implémentation utiliser
+    var useStripe = true; // logique métier
+    if (useStripe)
+        return sp.GetRequiredService<StripePaymentService>();
+    else
+        return sp.GetRequiredService<PaypalPaymentService>();
+});
+Ici, tu contrôles quelle instance est retournée.
+
+Tu peux même récupérer une instance déjà configurée (par exemple si StripePaymentService avait été enregistré avec des options spécifiques).
+
+Tu ne crées pas une nouvelle instance brute, tu relies à ce qui existe déjà dans le container. 
+
+Tu peux aussi retourner une instance créée à la main, sans passer par GetRequiredService :
+
+builder.Services.AddScoped<IPaymentService>(sp =>
+{
+    // Création manuelle avec paramètres custom
+    return new PaypalPaymentService();
+});
+👉 Dans ce cas, tu ne relies pas au container, tu crées toi-même l’objet.
+C’est utile si tu veux injecter des valeurs calculées ou externes.
+
+
+################### About Migration ##########################
+
+Après une modification des modèles, crée une migration pour chaque fournisseur :
+
+# SQLite — développement
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet ef migrations add NomDuChangementSqlite --context SqliteApplicationDbContext --output-dir Migrations\Sqlite
+dotnet ef database update --context SqliteApplicationDbContext
+
+# PostgreSQL — production
+$env:ASPNETCORE_ENVIRONMENT = "Production"
+$env:ConnectionStrings__PostgreSql = "Host=...;Database=...;Username=...;Password=..."
+dotnet ef migrations add NomDuChangementPostgreSql --context PostgreSqlApplicationDbContext --output-dir Migrations\PostgreSql
+dotnet ef database update --context PostgreSqlApplicationDbContext
+
+################################################
+
+IActionResult → tu retournes une réponse HTTP (Ok(), NotFound(), etc.).
+
+ActionResult<T> → tu retournes directement ton modèle (JSON).
+
+[HttpGet("{id}")] → obligatoire si tu veux que le paramètre soit pris depuis l’URL. Sinon, il sera cherché dans la query string ou ailleurs.

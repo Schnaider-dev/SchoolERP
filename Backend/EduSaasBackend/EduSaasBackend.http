@@ -1,0 +1,9 @@
+@EduSaasBackend_HostAddress = http://localhost:5225
+
+Get {{EduSaasBackend_HostAddress}}/api/auth/
+
+###
+
+POST {{EduSaasBackend_HostAddress}}/api/auth/register?message=L'utilisateur a été enregistré avec succès
+
+//TODO: I must do something
