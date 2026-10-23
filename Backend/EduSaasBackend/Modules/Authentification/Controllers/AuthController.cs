@@ -1,47 +1,57 @@
 namespace EduSaasBackend.Modules.Authentification.Controllers;
 
-using EduSaasBackend.Models;
 using EduSaasBackend.Modules.Authentification.Models;
-using Microsoft.AspNetCore.Identity;
+using EduSaasBackend.Modules.Authentification.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
+//With [ApiController], invalid DTOs automatically get a 400 Bad Request.
 [ApiController]
 [Route("api/[controller]")]
 
 public class AuthController : ControllerBase
 {
-    private readonly UserManager<ApplicationUser> _userManager;
-    public AuthController(UserManager<ApplicationUser> userManager)
+    private readonly IAuthentificationService _authentificationService;
+    public AuthController(IAuthentificationService authentificationService)
     {
-        _userManager = userManager;
+        _authentificationService = authentificationService;
     }
-    //Avec Api Controller, il faut preciser à quelle route doit repondre la methode, sinon elle ne reponds qu'à la route de base qui correspond à l'attribut founit.
-    // Contrairement au MVC avec vues, il n’y a pas de convention implicite Index. Il faut définir clairement comment on souhaite que l’URL corresponde.
 
+
+    /* 
+        Avec Api Controller, il faut preciser a quelle route doit repondre la methode, sinon elle ne reponds qu'a la route de base qui correspond a l'attribut founit.
+        Contrairement au MVC avec vues, il n y a pas de convention implicite Index. Il faut definir clairement comment on souhaite que l URL corresponde.
+
+    */
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromQuery] RegisterUser RegisterUser)
+
+    // AuthController.cs accepts registration as a JSON body.
+    public async Task<IActionResult> Register([FromBody] RegistrationRequest registerRequest)
     {
-        var result = await _userManager.CreateAsync(RegisterUser.User);
+        var result = await _authentificationService.RegisterUserAsync(registerRequest);
         if (!result.Succeeded)
         {
-            return BadRequest(result);
+            return BadRequest(new
+            {
+                errors = result.Errors.Select(error => new
+                {
+                    error.Code,
+                    error.Description
+                })
+            });
         }
-        
-        
-        
-        return Ok(result);
+
+        return StatusCode(StatusCodes.Status201Created);
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login()
+    public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
     {
-        return Ok();
-    }
-
-    [HttpGet]
-    public string GetMessage()
-    {
-        return "contrairement au MVC avec vues, il n’y a pas de convention implicite Index → tu dois définir clairement comment tu veux que l’URL corresponde.";
+        var jwtToken = await _authentificationService.LoginUserAsync(loginRequest);
+        if(jwtToken is not null)
+        {
+            return Ok(jwtToken);
+        }
+        return Unauthorized();
     }
 
 }
