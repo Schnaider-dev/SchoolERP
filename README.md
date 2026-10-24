@@ -68,9 +68,8 @@ dotnet ef database update
 ```
 
 ### Configuration
-Set the following (for example in `appsettings.Development.json` or user secrets):
 - `Jwt:Key`: a secret used to sign tokens
-- `Jwt:Issuer` / `Jwt:Audience`: <your values>
+- `Jwt:Issuer` / `Jwt:Audience`: <my values>
 - `Authentication:Google:ClientId` / `ClientSecret`: *(once Google OAuth is added)*
 
 ## API Endpoints (current)
@@ -79,8 +78,6 @@ Set the following (for example in `appsettings.Development.json` or user secrets
 |--------|-------|-------------|
 | POST | `/api/auth/register` | Create an account |
 | POST | `/api/auth/login` | Log in and receive a JWT |
-
-*(Adjust the routes to match your controllers.)*
 
 ## Roadmap
 
