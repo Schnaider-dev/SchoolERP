@@ -12,6 +12,7 @@ namespace EduSaasBackend.Modules.Authentification.Services;
 
 public class AuthentificationService : IAuthentificationService
 {
+
     private readonly UserManager<ApplicationUser> _userManager;
     public AuthentificationService(UserManager<ApplicationUser> userManager)
     {
@@ -40,7 +41,7 @@ public class AuthentificationService : IAuthentificationService
         return await _userManager.CreateAsync(user, request.Password);
     }
 
-    public async Task<string?> LoginUserAsync(LoginRequest loginRequest)
+    public async Task<LoginResult> LoginUserAsync(LoginRequest loginRequest)
     {
         var email = loginRequest.Email;
         var password = loginRequest.Password;
@@ -48,19 +49,29 @@ public class AuthentificationService : IAuthentificationService
 
         if (user != null && await _userManager.CheckPasswordAsync(user, password))
         {
-            var JwtToken = await GenerateJwtToken(user);
-            return JwtToken;
+            var jwtToken = await GenerateJwtToken(user);
+            return new LoginResult { Token = jwtToken };
         }
         ;
 
-        return null;
+        return new LoginResult { ErrorMessage = "Invalid email or password." };
+    }
+
+    public async Task<LoginResult> LoginByGoogleAsync(ApplicationUser? user)
+    {
+        if (user is null)
+        {
+            return new LoginResult { ErrorMessage = "The user cannot login" };
+        }
+        var jwtToken = await GenerateJwtToken(user);
+        return new LoginResult { Token = jwtToken };
     }
 
     private async Task<string> GenerateJwtToken(ApplicationUser user)
     {
         var SECRET_KEY = Environment.GetEnvironmentVariable("SECRET_KEY") ?? throw new InvalidOperationException("Environment variable 'JWT_SECRET' is required.");
-        var issuer = Environment.GetEnvironmentVariable("JWt_Issuer") ?? throw new InvalidOperationException("Environment variable 'JWt_Issuer' is required.");
-        var audience = Environment.GetEnvironmentVariable("JWT_Audience") ?? throw new InvalidOperationException("Environment variable 'JWT_Audience' is required.");
+        var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? throw new InvalidOperationException("Environment variable 'JWT_ISSUER' is required.");
+        var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? throw new InvalidOperationException("Environment variable 'JWT_AUDIENCE' is required.");
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SECRET_KEY));
         var roles = await _userManager.GetRolesAsync(user);

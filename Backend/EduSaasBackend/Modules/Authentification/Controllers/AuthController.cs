@@ -46,12 +46,12 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
     {
-        var jwtToken = await _authentificationService.LoginUserAsync(loginRequest);
-        if(jwtToken is not null)
+        var result = await _authentificationService.LoginUserAsync(loginRequest);
+        if(result.Token is not null)
         {
-            return Ok(jwtToken);
+            return Ok(result.Token);
         }
-        return Unauthorized();
+        return Unauthorized(new {error = result.ErrorMessage ?? "Invalid Credentials"});
     }
 
 }
